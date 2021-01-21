@@ -13,7 +13,7 @@ const precacheResources = [
   'offline.html',
   'js/idb.js',
   'js/main.js',
-  'manifest,json',
+  'manifest.json',
   'favicon.ico',
   'images/touch/icon-128x128.png',
   'images/touch/icon-192x192.png',
