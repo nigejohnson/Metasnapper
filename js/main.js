@@ -128,7 +128,7 @@ var idbApp = (function () {
   }
 
   function addSnap () {
-    window.fetch('/app/index.html'); // Fetch to ensure fetched from web or cache appropriately by intercepting service wroker.
+    window.fetch('index.html'); // Fetch to ensure fetched from web or cache appropriately by intercepting service wroker.
     window.location.href = 'index.html';
     document.getElementById('photo_preview').style.display = 'none';
   }
@@ -139,7 +139,7 @@ var idbApp = (function () {
       window.alert('Please clear or finish and save your snap before proceeding');
       return;
     }
-    window.fetch('/app/showsnaps.html'); // Fetch to ensure fetched from web or cache appropriately by intercepting service worker.
+    window.fetch('showsnaps.html'); // Fetch to ensure fetched from web or cache appropriately by intercepting service worker.
     window.location.href = 'showsnaps.html';
   }
 
@@ -149,7 +149,7 @@ var idbApp = (function () {
       window.alert('Please clear or finish and save your snap before proceeding');
       return;
     }
-    window.fetch('/app/config.html'); // Fetch to ensure fetched from web or cache appropriately by intercepting service worker.
+    window.fetch('config.html'); // Fetch to ensure fetched from web or cache appropriately by intercepting service worker.
     window.location.href = 'config.html';
   }
 
