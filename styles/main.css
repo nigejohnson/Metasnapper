@@ -17,7 +17,7 @@ html {
   background-color: #5049af;
 }
 
-body {
+div[id="pageContent"] {
   align-items: center;
   background-color: #5049af;
   display: flex;

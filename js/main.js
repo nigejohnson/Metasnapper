@@ -127,30 +127,68 @@ var idbApp = (function () {
     });
   }
 
-  function addSnap () {
+  /* function addSnap () {
     window.fetch('index.html'); // Fetch to ensure fetched from web or cache appropriately by intercepting service wroker.
     window.location.href = 'index.html';
     document.getElementById('photo_preview').style.display = 'none';
+  } */
+
+  /** To allow the index page, which is our starting page for the app, to bootstrap itself
+   * into existence without first having to run some javascript to merge a fragement into a template
+   * the index page IS the template and it, by default, is fully populated.
+   * But that means the "page content" fragment for the index page is already
+   * embedded in the index page.
+   * We don't want to have to maintain that html twice, once in the index page and then once
+   * as a seperate fragment to support transitions back to the index page.
+   * Therefore, to support transitions back to the index page from another page
+   * we have to do some special processing:
+   * specifically, we fetch the whole index page, and then extract the page content section
+   * of the index page as html, and then merge that html back into our current document/template
+   * as the new page content.
+   * And NB we can't do in this service worker, because service worker's are not allowed to
+   * access the DOMParser!
+   */
+  function addSnap (postfunc) {
+    window.fetch('index.html').then(function (response) {
+      return response.text();
+    }).then(function (content) {
+      // Convert the HTML string into a document object
+      var parser = new window.DOMParser();
+      var indexDoc = parser.parseFromString(content, 'text/html');
+      var indexPageContent = indexDoc.querySelectorAll('[id="pageContent"]')[0].innerHTML;
+
+      var elems = document.querySelectorAll('[id="pageContent"]');
+
+      for (var i = 0; i < elems.length; i++) {
+        elems[i].innerHTML = indexPageContent;
+      }
+
+      if (postfunc) postfunc();
+    }).catch(function (e) {
+      console.log(e);
+    });
   }
 
   function showSnaps () {
-    if (document.getElementById('title').value.trim() !== '' || document.getElementById('notes').value.trim() !== '' ||
-    document.getElementById('thumbnail').src.substring(0, 5).toLowerCase() === 'data:') {
-      window.alert('Please clear or finish and save your snap before proceeding');
-      return;
-    }
-    window.fetch('showsnaps.html'); // Fetch to ensure fetched from web or cache appropriately by intercepting service worker.
-    window.location.href = 'showsnaps.html';
+    idbApp.navigate('showsnapsfragment.html', idbApp.displaySnaps);
+  }
+
+  function showSnapsAfterSave () {
+    var postSaveFunc = function () {
+      idbApp.showSnaps();
+    };
+    idbApp.processPageAndSave(postSaveFunc);
   }
 
   function config () {
-    if (document.getElementById('title').value.trim() !== '' || document.getElementById('notes').value.trim() !== '' ||
-    document.getElementById('thumbnail').src.substring(0, 5).toLowerCase() === 'data:') {
-      window.alert('Please clear or finish and save your snap before proceeding');
-      return;
-    }
-    window.fetch('config.html'); // Fetch to ensure fetched from web or cache appropriately by intercepting service worker.
-    window.location.href = 'config.html';
+    idbApp.navigate('configfragment.html', idbApp.displayConfig);
+  }
+
+  function configAppAfterSave () {
+    var postSaveFunc = function () {
+      idbApp.config();
+    };
+    idbApp.processPageAndSave(postSaveFunc);
   }
 
   function postSnapsAfterSave () {
@@ -415,12 +453,37 @@ var idbApp = (function () {
     }
   }
 
+  // Navigate in a Single Page App manner
+  // As indexeddb use means that a lot of asynch processing
+  // will be happening, and we don't want that being stopped
+  // as we switch pages in a Multiple Page App!
+  // htmlfragment is the path to the htmlfragment to fetch and
+  // merge into the DOM.
+  // postfunc is a function to run after navigation, usually
+  // to merge data into the fragment...
+  function navigate (htmlfragment, postfunc) {
+    window.fetch(htmlfragment).then(function (response) {
+      return response.text();
+    }).then(function (content) {
+      var elems = document.querySelectorAll('[id="pageContent"]');
+
+      for (var i = 0; i < elems.length; i++) {
+        elems[i].innerHTML = content;
+      }
+
+      if (postfunc) postfunc();
+    }).catch(function (e) {
+      console.log(e);
+    });
+  }
+
   return {
     processPageAndSave: (processPageAndSave),
     getLocationThenSaveSnap: (getLocationThenSaveSnap),
     deleteSnap: (deleteSnap),
     saveSnap: (saveSnap),
     showSnaps: (showSnaps),
+    showSnapsAfterSave: (showSnapsAfterSave),
     addSnap: (addSnap),
     displaySnaps: (displaySnaps),
     postSnaps: (postSnaps),
@@ -428,9 +491,11 @@ var idbApp = (function () {
     previewPhoto: (previewPhoto),
     processThenSaveConfig: (processThenSaveConfig),
     saveConfig: (saveConfig),
+    configAppAfterSave: (configAppAfterSave),
     displayConfig: (displayConfig),
     disablePostButtons: (disablePostButtons),
     enablePostButtons: (enablePostButtons),
-    config: (config)
+    config: (config),
+    navigate: (navigate)
   };
 })();

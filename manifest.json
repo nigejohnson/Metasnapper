@@ -1,6 +1,7 @@
 {
   "short_name": "MetaSnapper",
   "name": "MetaSnapper",
+  "scope": "/",
   "icons": [
     {
       "src": "images/touch/icon-128x128.png",

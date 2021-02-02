@@ -2,6 +2,24 @@
 <!doctype html>
 <html lang="en">
 <head>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('service-worker.js?version=1.0.0', {
+    scope: '/'
+  })
+          .then(reg => {
+            console.log('Service worker registered! 😎', reg);
+          //  alert('Service worker registered! 😎', reg);
+          })
+          .catch(err => {
+            console.log('😥 Service worker registration failed: ', err);
+            alert('😥 Service worker registration failed: ', err);
+          });
+      });
+    }
+  </script>
+  
   <script type="text/javascript" src="js/idb.js"></script>
   <script type="text/javascript" src="js/main.js"></script>
   <link rel="manifest" href="manifest.json" />
@@ -20,6 +38,7 @@
   <title>MetaSnapper</title>
 </head>
 <body>
+  <div id="pageContent">
   <h1>MetaSnapper: Snap photos, autolocate in time and space, add context and share</h1>
   <section id="installBanner" class="banner">
       <button id="installBtn">Install app</button>
@@ -37,30 +56,20 @@
     <img src="" id="thumbnail" height="200" alt="Image preview...">
   </div>
   <button id="save" onclick="idbApp.processPageAndSave()">Save Snap</button></br></br>
-  <button id="show" onclick="idbApp.showSnaps()">Show Snaps</button></br></br>
+  <button id="show" onclick="idbApp.showSnapsAfterSave()">Show Snaps</button></br></br>
+  <!-- <button id="show" onclick="idbApp.navigate('showsnapsfragment.html', idbApp.displaySnaps)">Show Snaps</button></br></br> -->
   <button id="post" onclick="idbApp.postSnapsAfterSave()">Post Snaps</button></br></br>
-  <button id="config" onclick="idbApp.config()">Configure App</button></br></br>
+  <button id="config" onclick="idbApp.configAppAfterSave()">Configure App</button></br></br>
+  <!-- <button id="config" onclick="idbApp.navigate('configfragment.html', idbApp.displayConfig)">Configure App</button></br></br> -->
+
   <section class="text-container">
     <p id="message">
           <!-- message added dynamically -->
     </p>
   </section>
+  </div>
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', function() {
-        navigator.serviceWorker.register('service-worker.js?version=1.0.0')
-          .then(reg => {
-            console.log('Service worker registered! 😎', reg);
-          //  alert('Service worker registered! 😎', reg);
-          })
-          .catch(err => {
-            console.log('😥 Service worker registration failed: ', err);
-            alert('😥 Service worker registration failed: ', err);
-          });
-      });
-    }
-  </script>
+  
   <script>
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', event => {
