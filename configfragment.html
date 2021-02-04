@@ -1,11 +1,16 @@
-<div id="version">MetaSnapper Version 1.0.7</div>
+<div id="version">MetaSnapper Version 1.0.9</div>
   <h1>App Configuration</h1>
   
-  
+  <div id="emails">
   <h2>Send Snaps to Email Address:</h2>
-  <input type="email" id="mailTo" size="45"/> </br></br>
+  <span id="addressList">
+  <div id=anEmail1>
+  <input type="email" id="mailTo" size="45"/>
+  </div> 
+  </span>
+</div>
+  <button id="home" class="itemButton" onclick="idbApp.addEmail()">Add Another Email Address</button></br></br>
+  <button id="save" class="pageButton" onclick="idbApp.processThenSaveConfig()">Save</button></br></br>
+  <button id="home" class="pageButton" onclick="idbApp.addSnap()">Add More Snaps</button></br></br>
+<div id="message"></div>
   
-  
-  <button id="save" onclick="idbApp.processThenSaveConfig()">Save</button></br></br>
-  <button id="home" onclick="idbApp.addSnap()">Add More Snaps</button></br></br>
-  <div id="message"></div>

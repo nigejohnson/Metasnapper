@@ -307,7 +307,7 @@ var idbApp = (function () {
           cursor.value.latitude + '+' + cursor.value.longitude +
           '" target="_blank"> Show Location </a></p>';
       }
-      s += '<p>  <button id="submit" onclick="idbApp.deleteSnap(' +
+      s += '<p>  <button id="submit" class="itemButton" onclick="idbApp.deleteSnap(' +
          cursor.value.id + ')">Delete Snap</button> </p>';
 
       return cursor.continue().then(showRange);
@@ -370,11 +370,14 @@ var idbApp = (function () {
 
   function processThenSaveConfig () {
     clearText();
-    var mailTo = document.getElementById('mailTo').value;
+    // var mailTo = document.getElementById('mailTo').value;
 
+    var mailTo = getAddressList();
+
+    /* Allow the user to blank all values should they so choose...
     if (mailTo.trim() === '') {
       return;
-    }
+    } */
 
     var config = [
       {
@@ -385,6 +388,20 @@ var idbApp = (function () {
     document.getElementById('save').disabled = true;
 
     idbApp.saveConfig(config);
+  }
+
+  function getAddressList () {
+    var addressList = '';
+    var elems = document.querySelectorAll('[id="mailTo"]');
+
+    for (var i = 0; i < elems.length; i++) {
+      if (elems[i].value === '') continue; // Ignore any blank addresses
+      if (addressList === '') {
+        addressList += elems[i].value;
+      } else { addressList += ';' + elems[i].value; }
+    }
+    console.log(addressList);
+    return addressList;
   }
 
   function saveConfig (config) {
@@ -431,7 +448,23 @@ var idbApp = (function () {
       if (!cursor) { return; }
       fieldName = cursor.value.name;
       console.log('Cursored at:', fieldName);
-      document.getElementById(fieldName).value = cursor.value.value;
+      /* Special handling for potentially multiple email addresses */
+      if (fieldName === 'mailTo') {
+        var addressList = document.getElementById('addressList');
+        var addresses = cursor.value.value.split(';');
+
+        for (var i = 0; i < addresses.length; i++) {
+          if (i === 0) {
+            // Handle the first email address
+            document.getElementById('mailTo').value = addresses[0];
+          } else { // the rest...
+            var anEmail = createEmailAddressAtIndex(i + 1, addresses[i]);
+            addressList.appendChild(anEmail);
+          }
+        }
+      } else {
+        document.getElementById(fieldName).value = cursor.value.value;
+      }
 
       return cursor.continue().then(showRange);
     });
@@ -477,6 +510,58 @@ var idbApp = (function () {
     });
   }
 
+  function addEmail () {
+    var addressList = document.getElementById('addressList');
+    var addressCount = addressList.childElementCount;
+    var newIndex = addressCount + 1;
+    var anEmail = createEmailAddressAtIndex(newIndex);
+
+    addressList.appendChild(anEmail);
+  }
+
+  function createEmailAddressAtIndex (newIndex, anAddress) {
+    var anEmail = document.createElement('div');
+    var attDivId = document.createAttribute('id');
+    attDivId.value = 'anEmail' + newIndex;
+    anEmail.setAttributeNode(attDivId);
+
+    var newEmail = document.createElement('input');
+    var attType = document.createAttribute('type');
+    attType.value = 'email';
+    newEmail.setAttributeNode(attType);
+    var attId = document.createAttribute('id');
+    attId.value = 'mailTo';
+    newEmail.setAttributeNode(attId);
+    var attSize = document.createAttribute('size');
+    attSize.value = '45';
+    newEmail.setAttributeNode(attSize);
+
+    if (anAddress !== undefined) {
+      newEmail.value = anAddress;
+    }
+
+    anEmail.appendChild(newEmail);
+
+    var removeButton = document.createElement('button');
+    var attClass = document.createAttribute('class');
+    attClass.value = 'itemButton';
+    removeButton.setAttributeNode(attClass);
+
+    var attOnclick = document.createAttribute('onclick');
+    attOnclick.value = "idbApp.removeEmail('anEmail" + newIndex + "')";
+    removeButton.setAttributeNode(attOnclick);
+    var node = document.createTextNode('Remove');
+    removeButton.appendChild(node);
+    anEmail.appendChild(removeButton);
+
+    return anEmail;
+  }
+
+  function removeEmail (id) {
+    var anEmail = document.getElementById(id);
+    anEmail.remove();
+  }
+
   return {
     processPageAndSave: (processPageAndSave),
     getLocationThenSaveSnap: (getLocationThenSaveSnap),
@@ -496,6 +581,8 @@ var idbApp = (function () {
     disablePostButtons: (disablePostButtons),
     enablePostButtons: (enablePostButtons),
     config: (config),
-    navigate: (navigate)
+    navigate: (navigate),
+    addEmail: (addEmail),
+    removeEmail: (removeEmail)
   };
 })();

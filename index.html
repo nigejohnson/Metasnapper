@@ -49,17 +49,17 @@
   <textarea id="notes" rows="4" cols="40"> </textarea> </br></br>
   <h2>Photo</h2>
   <label for="photo" class="custom-file-upload" id="photo_label">
-    Get Photo
+    Add Photo
   </label>
   <input type="file" accept="image/*" id="photo" size="100" onchange="idbApp.previewPhoto()">
   <div id="photo_preview">
     <img src="" id="thumbnail" height="200" alt="Image preview...">
   </div>
-  <button id="save" onclick="idbApp.processPageAndSave()">Save Snap</button></br></br>
-  <button id="show" onclick="idbApp.showSnapsAfterSave()">Show Snaps</button></br></br>
+  <button id="save" class="pageButton" onclick="idbApp.processPageAndSave()">Save Snap</button></br></br>
+  <button id="show" class="pageButton" onclick="idbApp.showSnapsAfterSave()">Show Snaps</button></br></br>
   <!-- <button id="show" onclick="idbApp.navigate('showsnapsfragment.html', idbApp.displaySnaps)">Show Snaps</button></br></br> -->
-  <button id="post" onclick="idbApp.postSnapsAfterSave()">Post Snaps</button></br></br>
-  <button id="config" onclick="idbApp.configAppAfterSave()">Configure App</button></br></br>
+  <button id="post" class="pageButton" onclick="idbApp.postSnapsAfterSave()">Post Snaps</button></br></br>
+  <button id="config" class="pageButton" onclick="idbApp.configAppAfterSave()">Configure App</button></br></br>
   <!-- <button id="config" onclick="idbApp.navigate('configfragment.html', idbApp.displayConfig)">Configure App</button></br></br> -->
 
   <section class="text-container">
