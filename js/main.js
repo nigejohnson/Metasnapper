@@ -314,7 +314,9 @@ var idbApp = (function () {
     }).then(function () {
       if (s === '') { s = '<p>No results.</p>'; }
       document.getElementById('notes').innerHTML = s;
-    });
+    }).catch(function (e) {
+      console.log('Error when attempting to display snaps: ' + e);
+    }); // Have to have error logging here as this function has started its own promise chain.;
   }
 
   function readSubmitResponseAsText (response) {
@@ -467,7 +469,9 @@ var idbApp = (function () {
       }
 
       return cursor.continue().then(showRange);
-    });
+    }).catch(function (e) {
+      console.log('Error when attempting to display config: ' + e);
+    }); // Have to have error logging here as this function has started its own promise chain.
   }
 
   function disablePostButtons () {
@@ -533,8 +537,12 @@ var idbApp = (function () {
     attId.value = 'mailTo';
     newEmail.setAttributeNode(attId);
     var attSize = document.createAttribute('size');
-    attSize.value = '45';
+    attSize.value = '44';
     newEmail.setAttributeNode(attSize);
+    // Apparently the maximum allowed length of an email address is 320 characters
+    var attMaxlength = document.createAttribute('maxlength');
+    attMaxlength.value = '320';
+    newEmail.setAttributeNode(attMaxlength);
 
     if (anAddress !== undefined) {
       newEmail.value = anAddress;
