@@ -193,6 +193,7 @@ var idbApp = (function () {
 
   function postSnapsAfterSave () {
     clearText();
+
     idbApp.disablePostButtons();
 
     var postAfterSave = function () {
@@ -480,6 +481,12 @@ var idbApp = (function () {
     for (var i = 0; i < elems.length; i++) {
       elems[i].disabled = true;
     }
+
+    var spinners = document.querySelectorAll('[id="loader"]');
+
+    for (i = 0; i < spinners.length; i++) {
+      spinners[i].style.display = 'block';
+    }
   }
 
   function enablePostButtons () {
@@ -488,6 +495,17 @@ var idbApp = (function () {
     for (var i = 0; i < elems.length; i++) {
       elems[i].disabled = false;
     }
+
+    var spinners = document.querySelectorAll('[id="loader"]');
+
+    for (i = 0; i < spinners.length; i++) {
+      spinners[i].style.display = 'none';
+    }
+
+    /* var spinner = document.getElementById('loader');
+    if (spinner !== null) {
+      spinner.style.display = 'none';
+    } */
   }
 
   // Navigate in a Single Page App manner
