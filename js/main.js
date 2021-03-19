@@ -4,6 +4,8 @@
 var idbApp = (function () {
   'use strict';
 
+  var appLogLevel = 1;
+
   // Check for support
   if (!('indexedDB' in window)) {
     console.log('This browser doesn\'t support IndexedDB');
@@ -21,19 +23,46 @@ var idbApp = (function () {
   * up to that of the current database (meaning the version with the number passed in as
   * the second parameter of idb.open).
   */
-  var dbPromise = window.idb.open('metasnaps', 1, function (upgradeDb) {
+  var dbPromise = window.idb.open('metasnaps', 2, function (upgradeDb) {
     switch (upgradeDb.oldVersion) {
       case 0:
         console.log('Creating the snaps object store');
         upgradeDb.createObjectStore('snaps', { keyPath: 'id', autoIncrement: 'true' });
         console.log('Creating the config object store');
         upgradeDb.createObjectStore('config', { keyPath: 'name' });
+        console.log('Creating the application log store');
+        upgradeDb.createObjectStore('applog', { keyPath: 'id', autoIncrement: 'true' });
+        logInfo('All metasnapper object stores successfully reinitialised.');
         break;
       case 1:
-        // So here would go the code to take an old version 1 db up to the latest version
+        // Code to take version 1 of our indexeddb up to the latest version
+        // We assume version 1 is the snaps and the config store so version 2 is all of that
+        // plus the applog object store.
+        console.log('Creating the application log store');
+        upgradeDb.createObjectStore('applog', { keyPath: 'id', autoIncrement: 'true' });
+        logInfo('All metasnapper object stores successfully reinitialised.');
+        break;
+      case 2:
+        // So here would go the code to take an old version 2 db up to the latest version
         break;
     }
   });
+
+  /* This function just ensures everything is set correctly when the app is re-opened. */
+  /* Remember, this app is following a single page app pattern with the index page as
+  the template, so, once the app has initially been opened, only the pageContent
+  div content gets "reloaded": JS outside of that should only run when the page is intially
+  loaded/the app opened. Subsequent revisits to the "Add Snap" index page shouldn't cause this javascript to
+  re-run */
+  async function reOpenApp () {
+    var startingAppLogLevel = 1;
+    var appConfig;
+    appConfig = await getConfig();
+    if (appConfig && appConfig.appLogLevel && (appConfig.appLogLevel >= 0 && appConfig.appLogLevel <= 3)) {
+      startingAppLogLevel = appConfig.appLogLevel;
+    }
+    idbApp.setAppLogLevel(startingAppLogLevel);
+  }
 
   function processPageAndSave (postSaveFunc) {
     var thisSnap = {
@@ -64,7 +93,7 @@ var idbApp = (function () {
 
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(async function (location) {
-        console.log('Geolocation did the callback');
+        logDebug('Geolocation did the callback');
         await idbApp.saveSnap(title, notes, photoasdataurl, location);
         if (postSaveFunc) postSaveFunc();
       }, async function () { await idbApp.saveSnap(title, notes, photoasdataurl); if (postSaveFunc) postSaveFunc(); }, { timeout: 5000 }); // Second call is for no location
@@ -81,7 +110,7 @@ var idbApp = (function () {
       store.delete(id);
       idbApp.displaySnaps();
     }).catch(function (e) {
-      console.log(e);
+      handleError(e);
     });
   }
 
@@ -107,17 +136,17 @@ var idbApp = (function () {
         }
       ];
       return await Promise.all(items.map(async function (item) {
-        console.log('Adding item: ', item);
+        logDebug('Adding metasnap with title: ' + item.title);
         return await store.add(item);
       })
       ).then(function () {
-        console.log('Snap added successfully!');
+        logDebug('Snap added successfully!');
         document.getElementById('title').value = '';
         document.getElementById('notes').value = '';
         document.getElementById('thumbnail').src = '';
         document.getElementById('photo_preview').style.display = 'none';
       }).catch(function (e) {
-        console.log(e);
+        handleError(e);
         window.alert('Unable to save snaps. The error is' + e);
         tx.abort();
       }).finally(function () {
@@ -127,11 +156,121 @@ var idbApp = (function () {
     });
   }
 
-  /* function addSnap () {
-    window.fetch('index.html'); // Fetch to ensure fetched from web or cache appropriately by intercepting service wroker.
-    window.location.href = 'index.html';
-    document.getElementById('photo_preview').style.display = 'none';
-  } */
+  async function handleError (errObject, severity) {
+    /* Eventually, we might want to call this from a window.onerror and window.onunhandledrejection,
+     in order to intercept all errors without needing to implement explicit error handling everywhere, but remember that
+    the service workers have no access to the window object...
+    We might also want to expand this function to make it fancier... e.g. alert messages to the user,
+    enrich the error by say capturing info about the browser/user agent etc... but all for a later date...
+    Severity is passed in because not all errors are errors! Consider wanrings for example... */
+
+    /* Write to the standard JS console so that all relevant information is visible in one place when debugging,
+    and so errors still get recorded even if somehting has gone wrong with indexeddb or the way we write to it! */
+    console.log('Looks like there was a problem:', errObject);
+    // If severity hasn't been passed in default to ERROR
+    if (!severity) {
+      severity = 'ERROR';
+    }
+    // Writing to the app log is very useful as the standard JS console won't be accessible when the app
+    // is running on many devices, especially Apple ones...
+    saveLogEntry(severity, errObject, 'unstructured');
+  }
+
+  function getAppLogLevel () {
+    return appLogLevel;
+  }
+
+  function setAppLogLevel (newLogLevel) {
+    appLogLevel = newLogLevel;
+  }
+
+  /* Included for completeness and to allow direct logging of an error message, though, in practice
+  you would most likely be calling the handleError method to take advantage of additional error handling steps
+  such as possibly enriching the error message object with further information, alerting the user, also writing
+  to the standard console etc... */
+  function logError (message) {
+    /* For this function we are going to assume that a console.log call has already been made to log
+     the raw error object rather than the message. For the warning, info and debug functions
+     we are going to assume that the info to log is a simple string and therefore nothing is ever likely
+     to be lost by writing that string to console.log directly within each function. */
+    saveLogEntry('ERROR', message, 'unstructured');
+  }
+
+  function logWarning (message) {
+    if (idbApp.getAppLogLevel() <= 2) {
+      console.log(message);
+      saveLogEntry('WARNING', message, 'unstructured');
+    }
+  }
+
+  function logInfo (message) {
+    if (idbApp.getAppLogLevel() <= 1) {
+      console.log(message);
+      saveLogEntry('INFO', message, 'unstructured');
+    }
+  }
+
+  function logDebug (message) {
+    if (idbApp.getAppLogLevel() <= 0) {
+      console.log(message);
+      saveLogEntry('DEBUG', message, 'unstructured');
+    }
+  }
+
+  /* Severity will be debug, info, warn and error */
+  /* and messageStructure is the JSON "object type" of the message essentially...
+  something that tells a program reading each log entry how to interpret each message */
+  /* Consider placing this in a seperate module so it can more easily be used within other logging frameworks */
+  async function saveLogEntry (severity, message, messageStructure) {
+    await dbPromise.then(async function (db) {
+      var tx = db.transaction('applog', 'readwrite');
+      var store = tx.objectStore('applog');
+
+      var datetime = new Date();
+
+      /* It's only an array of one item, but the array is convenient as it allows the item
+        to be passed into a child promise chain using Promises.all.
+        Be very mindful of the fact that the Promises.all starts a child promise chain:
+        it only inherits variables such as the tx transation variable because it is fully "enclosed"
+        in its parent promise chain.
+        Later steps on the SAME promise chain do not have access to the scope of variables
+        declared within functions earlier in the promise chain! */
+
+      var items = [
+        {
+          datetime: datetime,
+          severity: severity,
+          message: message,
+          messageStructure: messageStructure
+        }
+      ];
+      return await Promise.all(items.map(async function (item) {
+        console.log('Adding item: ', item); // We can't use our standard logging functions here or we'll end up in an infinite regress!
+        return await store.add(item);
+      })
+      ).then(function () {
+        console.log('Application log entry created successfully!');
+      }).catch(function (e) {
+        console.log(e);
+        window.alert('Unable to create a log entry. The error is' + e);
+        tx.abort();
+      }).finally(function () {
+        console.log('Cleaning up');
+      });
+    });
+  }
+
+  function clearAppLog () {
+    dbPromise.then(function (db) {
+      var tx = db.transaction('applog', 'readwrite');
+      var store = tx.objectStore('applog');
+      store.clear();
+    }).catch(function (e) {
+      handleError(e);
+    }).then(function () {
+      document.getElementById('logentries').innerHTML = '<p>No results.</p>';
+    });
+  }
 
   /** To allow the index page, which is our starting page for the app, to bootstrap itself
    * into existence without first having to run some javascript to merge a fragement into a template
@@ -165,7 +304,7 @@ var idbApp = (function () {
 
       if (postfunc) postfunc();
     }).catch(function (e) {
-      console.log(e);
+      handleError(e);
     });
   }
 
@@ -189,6 +328,17 @@ var idbApp = (function () {
       idbApp.config();
     };
     idbApp.processPageAndSave(postSaveFunc);
+  }
+
+  function applog () {
+    idbApp.navigate('applogfragment.html', idbApp.displayApplog);
+  }
+
+  function applogAfterSave () {
+    var postSaveFunc = function () {
+      idbApp.applog();
+    };
+    idbApp.processThenSaveConfig(postSaveFunc);
   }
 
   function postSnapsAfterSave () {
@@ -220,7 +370,7 @@ var idbApp = (function () {
       return store.openCursor();
     }).then(function showRange (cursor) {
       if (!cursor) { return; }
-      console.log('Cursored at:', cursor.value.title);
+      logDebug('Cursored at:' + cursor.value.title);
 
       var noteRecord = {
         title: cursor.value.title,
@@ -249,7 +399,7 @@ var idbApp = (function () {
           .then(validateResponse)
           .then(readSubmitResponseAsText)
           .then(showText)
-          .catch(logError).finally(function () {
+          .catch(handleError).finally(function () {
             idbApp.enablePostButtons();
           });
       } else {
@@ -275,7 +425,7 @@ var idbApp = (function () {
     }).then(function stepThroughConfig (cursor) {
       if (!cursor) { return; }
       var fieldName = cursor.value.name;
-      console.log('Cursored at:', fieldName);
+      logDebug('Cursored at:' + fieldName);
       appConfig[fieldName] = cursor.value.value;
 
       return cursor.continue().then(stepThroughConfig);
@@ -294,7 +444,7 @@ var idbApp = (function () {
       return store.openCursor();
     }).then(function showRange (cursor) {
       if (!cursor) { return; }
-      console.log('Cursored at:', cursor.value.title);
+      logDebug('Cursored at:' + cursor.value.title);
       s += '<h2>' + cursor.value.title + '</h2>';
       s += '<p>' + cursor.value.note + '</p>';
       s += '<p>   <img src="' + cursor.value.photoasdataurl + '"/></p>';
@@ -316,7 +466,32 @@ var idbApp = (function () {
       if (s === '') { s = '<p>No results.</p>'; }
       document.getElementById('notes').innerHTML = s;
     }).catch(function (e) {
-      console.log('Error when attempting to display snaps: ' + e);
+      handleError('Error when attempting to display snaps: ' + e);
+    }); // Have to have error logging here as this function has started its own promise chain.;
+  }
+
+  function displayApplog () {
+    var s = '';
+    clearText();
+    dbPromise.then(function (db) {
+      var tx = db.transaction('applog', 'readonly');
+      var store = tx.objectStore('applog');
+      return store.openCursor();
+    }).then(function showLog (cursor) {
+      if (!cursor) { return; }
+      logDebug('Cursored at:' + cursor.value.datetime);
+      s += '<p><b>' + cursor.value.datetime + '</b></p>';
+      s += '<p>' + cursor.value.severity + ': ';
+      if (cursor.value.messageStructure === 'unstructured') {
+        s += cursor.value.message + '</p>';
+      }
+
+      return cursor.continue().then(showLog);
+    }).then(function () {
+      if (s === '') { s = '<p>No results.</p>'; }
+      document.getElementById('logentries').innerHTML = s;
+    }).catch(function (e) {
+      handleError('Error when attempting to display application log: ' + e);
     }); // Have to have error logging here as this function has started its own promise chain.;
   }
 
@@ -351,9 +526,10 @@ var idbApp = (function () {
     }
   }
 
+  /* Now superseded by handleError
   function logError (error) {
     console.log('Looks like there was a problem:', error);
-  }
+  } */
 
   function previewPhoto () {
     var preview = document.getElementById('thumbnail');
@@ -371,11 +547,12 @@ var idbApp = (function () {
     }
   }
 
-  function processThenSaveConfig () {
+  async function processThenSaveConfig (postSaveFunc) {
     clearText();
     // var mailTo = document.getElementById('mailTo').value;
 
     var mailTo = getAddressList();
+    var appLogLevel = document.getElementById('appLogLevel').value;
 
     /* Allow the user to blank all values should they so choose...
     if (mailTo.trim() === '') {
@@ -386,11 +563,18 @@ var idbApp = (function () {
       {
         name: 'mailTo',
         value: mailTo
-      }];
+      },
+      {
+        name: 'appLogLevel',
+        value: appLogLevel
+      }
+    ];
 
     document.getElementById('save').disabled = true;
 
-    idbApp.saveConfig(config);
+    await idbApp.saveConfig(config);
+
+    if (postSaveFunc) postSaveFunc();
   }
 
   function getAddressList () {
@@ -403,11 +587,11 @@ var idbApp = (function () {
         addressList += elems[i].value;
       } else { addressList += ';' + elems[i].value; }
     }
-    console.log(addressList);
+    logDebug('Email address list: ' + addressList);
     return addressList;
   }
 
-  function saveConfig (config) {
+  async function saveConfig (config) {
     dbPromise.then(function (db) {
       var tx = db.transaction('config', 'readwrite');
       var store = tx.objectStore('config');
@@ -424,16 +608,19 @@ var idbApp = (function () {
 
       // Each config record is just a name-value pair.
       return Promise.all(config.map(function (configRecord) {
-        console.log('Adding config record: ', configRecord);
+        logDebug('Adding config record for setting: ' + configRecord.name);
+        if (configRecord.name === 'appLogLevel') {
+          idbApp.setAppLogLevel(configRecord.value);
+        }
         return store.put(configRecord); // This should update using the name of the config field as a key, or add if the config field is not yet in the object store.
       })
       ).catch(function (e) {
         document.getElementById('save').disabled = false;
         tx.abort();
-        console.log(e);
+        handleError(e);
       }).then(function () {
         document.getElementById('save').disabled = false;
-        console.log('Config saved successfully!');
+        logDebug('Config saved successfully!');
         document.getElementById('message').textContent = 'Config saved successfully';
       });
     });
@@ -442,15 +629,16 @@ var idbApp = (function () {
   function displayConfig () {
     var fieldName = '';
     clearText();
+    document.getElementById('appLogLevel').value = 1; // Default app logging level to 1...if it is set it'll get reset as we read back the config settings below
     dbPromise.then(function (db) {
       var tx = db.transaction('config', 'readonly');
       var store = tx.objectStore('config');
       // Just looping through a list of records, each one of which is just a name-value pair
       return store.openCursor();
-    }).then(function showRange (cursor) {
+    }).then(function showConfig (cursor) {
       if (!cursor) { return; }
       fieldName = cursor.value.name;
-      console.log('Cursored at:', fieldName);
+      logDebug('Cursored at:' + fieldName);
       /* Special handling for potentially multiple email addresses */
       if (fieldName === 'mailTo') {
         var addressList = document.getElementById('addressList');
@@ -469,9 +657,9 @@ var idbApp = (function () {
         document.getElementById(fieldName).value = cursor.value.value;
       }
 
-      return cursor.continue().then(showRange);
+      return cursor.continue().then(showConfig);
     }).catch(function (e) {
-      console.log('Error when attempting to display config: ' + e);
+      handleError('Error when attempting to display config: ' + e);
     }); // Have to have error logging here as this function has started its own promise chain.
   }
 
@@ -528,7 +716,7 @@ var idbApp = (function () {
 
       if (postfunc) postfunc();
     }).catch(function (e) {
-      console.log(e);
+      handleError(e);
     });
   }
 
@@ -589,6 +777,7 @@ var idbApp = (function () {
   }
 
   return {
+    reOpenApp: (reOpenApp),
     processPageAndSave: (processPageAndSave),
     getLocationThenSaveSnap: (getLocationThenSaveSnap),
     deleteSnap: (deleteSnap),
@@ -609,6 +798,18 @@ var idbApp = (function () {
     config: (config),
     navigate: (navigate),
     addEmail: (addEmail),
-    removeEmail: (removeEmail)
+    removeEmail: (removeEmail),
+    handleError: (handleError),
+    logDebug: (logDebug),
+    logInfo: (logInfo),
+    logWarning: (logWarning),
+    logError: (logError),
+    saveLogEntry: (saveLogEntry),
+    applogAfterSave: (applogAfterSave),
+    clearAppLog: (clearAppLog),
+    displayApplog: (displayApplog),
+    applog: (applog),
+    getAppLogLevel: (getAppLogLevel),
+    setAppLogLevel: (setAppLogLevel)
   };
 })();

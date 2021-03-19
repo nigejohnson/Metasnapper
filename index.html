@@ -71,6 +71,10 @@
 
   
   <script>
+    // If re-opening the app ensure everything is set up correctly
+    // (currently this only amounts to ensuring that the app log level is set correctly in the idbApp namespace)
+    idbApp.reOpenApp();
+
     let deferredPrompt;
     window.addEventListener('beforeinstallprompt', event => {
 
