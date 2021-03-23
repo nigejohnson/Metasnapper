@@ -5,6 +5,7 @@ var idbApp = (function () {
   'use strict';
 
   var appLogLevel = 1;
+  var defaultTitle = 'MetaSnap: ';
 
   // Check for support
   if (!('indexedDB' in window)) {
@@ -56,12 +57,23 @@ var idbApp = (function () {
   re-run */
   async function reOpenApp () {
     var startingAppLogLevel = 1;
+    var startingDefaultTitle = defaultTitle;
     var appConfig;
     appConfig = await getConfig();
     if (appConfig && appConfig.appLogLevel && (appConfig.appLogLevel >= 0 && appConfig.appLogLevel <= 3)) {
       startingAppLogLevel = appConfig.appLogLevel;
     }
+    if (appConfig && (appConfig.defaultTitle || appConfig.defaultTitle === '')) {
+      startingDefaultTitle = appConfig.defaultTitle;
+    }
     idbApp.setAppLogLevel(startingAppLogLevel);
+    idbApp.setDefaultTitle(startingDefaultTitle);
+
+    /* Set the snap title on the index page */
+    var titleElement = document.getElementById('title');
+    if (titleElement) {
+      titleElement.value = startingDefaultTitle;
+    }
   }
 
   function processPageAndSave (postSaveFunc) {
@@ -83,8 +95,11 @@ var idbApp = (function () {
     if (photoasdataurl.substring(0, 5).toLowerCase() !== 'data:') {
       photoasdataurl = '';
     }
-    // A snap must at least have a title...
-    if (title.trim() === '') {
+
+    var trimmedTitle = title.trim();
+    // Skip save if the snap only comprises of a default title or a blank title and has no notes and no photo...
+    if ((trimmedTitle.trim() === '' || trimmedTitle === idbApp.getDefaultTitle().trim()) &&
+    notes.trim() === '' && photoasdataurl === '') {
       if (postSaveFunc) postSaveFunc();
       return;
     }
@@ -141,7 +156,7 @@ var idbApp = (function () {
       })
       ).then(function () {
         logDebug('Snap added successfully!');
-        document.getElementById('title').value = '';
+        document.getElementById('title').value = idbApp.getDefaultTitle();
         document.getElementById('notes').value = '';
         document.getElementById('thumbnail').src = '';
         document.getElementById('photo_preview').style.display = 'none';
@@ -182,6 +197,14 @@ var idbApp = (function () {
 
   function setAppLogLevel (newLogLevel) {
     appLogLevel = newLogLevel;
+  }
+
+  function getDefaultTitle () {
+    return defaultTitle;
+  }
+
+  function setDefaultTitle (newDefaultTitle) {
+    defaultTitle = newDefaultTitle;
   }
 
   /* Included for completeness and to allow direct logging of an error message, though, in practice
@@ -273,7 +296,7 @@ var idbApp = (function () {
   }
 
   /** To allow the index page, which is our starting page for the app, to bootstrap itself
-   * into existence without first having to run some javascript to merge a fragement into a template
+   * into existence without first having to run some javascript to merge a fragment into a template
    * the index page IS the template and it, by default, is fully populated.
    * But that means the "page content" fragment for the index page is already
    * embedded in the index page.
@@ -300,6 +323,12 @@ var idbApp = (function () {
 
       for (var i = 0; i < elems.length; i++) {
         elems[i].innerHTML = indexPageContent;
+      }
+
+      /* Set the snap title on the index page */
+      var titleElement = document.getElementById('title');
+      if (titleElement) {
+        titleElement.value = idbApp.getDefaultTitle();
       }
 
       if (postfunc) postfunc();
@@ -549,15 +578,10 @@ var idbApp = (function () {
 
   async function processThenSaveConfig (postSaveFunc) {
     clearText();
-    // var mailTo = document.getElementById('mailTo').value;
 
     var mailTo = getAddressList();
     var appLogLevel = document.getElementById('appLogLevel').value;
-
-    /* Allow the user to blank all values should they so choose...
-    if (mailTo.trim() === '') {
-      return;
-    } */
+    var defaultTitle = document.getElementById('defaultTitle').value;
 
     var config = [
       {
@@ -567,6 +591,10 @@ var idbApp = (function () {
       {
         name: 'appLogLevel',
         value: appLogLevel
+      },
+      {
+        name: 'defaultTitle',
+        value: defaultTitle
       }
     ];
 
@@ -612,6 +640,9 @@ var idbApp = (function () {
         if (configRecord.name === 'appLogLevel') {
           idbApp.setAppLogLevel(configRecord.value);
         }
+        if (configRecord.name === 'defaultTitle') {
+          idbApp.setDefaultTitle(configRecord.value);
+        }
         return store.put(configRecord); // This should update using the name of the config field as a key, or add if the config field is not yet in the object store.
       })
       ).catch(function (e) {
@@ -630,6 +661,7 @@ var idbApp = (function () {
     var fieldName = '';
     clearText();
     document.getElementById('appLogLevel').value = 1; // Default app logging level to 1...if it is set it'll get reset as we read back the config settings below
+    document.getElementById('defaultTitle').value = idbApp.getDefaultTitle(); // Default the default title to "MetaSnap: " or whatever the current value is the idbApp namespace.
     dbPromise.then(function (db) {
       var tx = db.transaction('config', 'readonly');
       var store = tx.objectStore('config');
@@ -810,6 +842,8 @@ var idbApp = (function () {
     displayApplog: (displayApplog),
     applog: (applog),
     getAppLogLevel: (getAppLogLevel),
-    setAppLogLevel: (setAppLogLevel)
+    setAppLogLevel: (setAppLogLevel),
+    getDefaultTitle: (getDefaultTitle),
+    setDefaultTitle: (setDefaultTitle)
   };
 })();
