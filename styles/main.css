@@ -17,13 +17,18 @@ html {
   background-color: #5049af;
 }
 
+/* These two font size settings are necessary to stop automatic zoom in on an iPhone. 
+Basically Apple regard any font sizes less than 16px as too small. */
+body { font-size: 16px; }
+input[type="text"],input[type="email"],textarea,select,select:focus { font-size: 16px; } 
+
 div[id="pageContent"] {
   align-items: center;
   background-color: #5049af;
   display: flex;
   flex-direction: column;
   font-family: 'Roboto','Helvetica','Arial',sans-serif;
-  justify-content: space-between;
+  justify-content: space-evenly;
   margin: 0;
   min-height: 100vh;
 }
@@ -54,8 +59,8 @@ header {
   box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
   cursor: pointer;
   font-family: "Roboto", "Helvetica", "Arial", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: bold;
   height: 25px;
   letter-spacing: 0;
   margin: 2px;
@@ -74,9 +79,9 @@ header {
   cursor: pointer;
   display: inline-block;
   font-family: "Roboto", "Helvetica", "Arial", sans-serif;
-  font-size: 14px;
-  font-weight: 500;
-  height: 36px;
+  font-size: 16px;
+  font-weight: bold;
+  height: 40px;
   letter-spacing: 0;
   margin: 10px;
   min-width: 64px;
@@ -144,7 +149,7 @@ a {
 
 .flex-list {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-evenly;
   padding: 0;
   width: 100%;
 }
@@ -194,7 +199,7 @@ label[id="photo_label"]{
   cursor: pointer;
   display: inline-block;
   font-family: "Roboto", "Helvetica", "Arial", sans-serif;
-  font-size: 14px;
+  font-size: 16px;
   height: 17px;
   letter-spacing: 0;
   margin: 10px;
