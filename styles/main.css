@@ -19,8 +19,8 @@ html {
 
 /* These two font size settings are necessary to stop automatic zoom in on an iPhone. 
 Basically Apple regard any font sizes less than 16px as too small. */
-body { font-size: 16px; }
-input[type="text"],input[type="email"],textarea,select,select:focus { font-size: 16px; } 
+body { font-size: 17px; }
+input[type="text"],input[type="email"],textarea,select,select:focus { font-size: 17px; } 
 
 div[id="pageContent"] {
   align-items: center;
@@ -59,7 +59,7 @@ header {
   box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
   cursor: pointer;
   font-family: "Roboto", "Helvetica", "Arial", sans-serif;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: bold;
   height: 25px;
   letter-spacing: 0;
@@ -79,7 +79,7 @@ header {
   cursor: pointer;
   display: inline-block;
   font-family: "Roboto", "Helvetica", "Arial", sans-serif;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: bold;
   height: 40px;
   letter-spacing: 0;
@@ -91,15 +91,6 @@ header {
   text-align: center;
   vertical-align: middle;
   width: 30%;
-}
-
-.card {
-  box-shadow: 0 2px 2px 0 rgba(0,0,0,.14),
-              0 3px 1px -2px rgba(0,0,0,.2),
-              0 1px 5px 0 rgba(0,0,0,.12);
-  margin: 20px;
-  max-width: 600px;
-  padding: 10px;
 }
 
 p {
@@ -126,6 +117,7 @@ h3 {
   padding: 10px;
   width: 100%;
   text-align: center;
+  box-sizing: border-box;
 }
 
 .img-container {
@@ -199,7 +191,7 @@ label[id="photo_label"]{
   cursor: pointer;
   display: inline-block;
   font-family: "Roboto", "Helvetica", "Arial", sans-serif;
-  font-size: 16px;
+  font-size: 17px;
   height: 17px;
   letter-spacing: 0;
   margin: 10px;
@@ -268,3 +260,24 @@ input:invalid {
 input:valid {
   background-color: white;
 }
+
+#title {
+   font-size: 17px;
+}
+
+#notes {
+   font-size: 17px;
+}
+
+#editableTitle {
+  align-items: center;
+  background-color: #92a8d1;
+  font-weight: bold;
+  font-size: 20px;
+}
+
+#editableNote {
+  align-items: center;
+  background-color: #92a8d1;
+  font-size: 17px;
+  }

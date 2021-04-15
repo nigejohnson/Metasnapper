@@ -25,7 +25,7 @@
   <link rel="manifest" href="manifest.json" />
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
-  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="Progressive Web App Reference Implementation">
   <meta name="keywords" content="PWA,Progressive Web App">
   <link rel="apple-touch-icon" sizes="192x192" href="/images/touch/icon-192x192.png">
@@ -39,14 +39,14 @@
 </head>
 <body>
   <div id="pageContent">
-  <h1>MetaSnapper: Snap photos, autolocate in time and space, add context and share</h1>
+  <h1>MetaSnapper: Snap photos, autolocate in time and space, add context and share</h1> 
   <section id="installBanner" class="banner">
       <button id="installBtn">Install app</button>
   </section>
   <h2>Title</h2>
   <input type="text" id="title" size="30" maxlength="100"/> </br>
   <h2>Notes</h2>
-  <textarea id="notes" rows="4" cols="38" maxlength="10000"> </textarea> </br>
+  <textarea id="notes" rows="4" cols="30" maxlength="10000"> </textarea> </br>
   <h2>Photo</h2>
   <label for="photo" class="custom-file-upload" id="photo_label">
     Add Photo
@@ -63,9 +63,9 @@
 
   <section class="text-container">
     <div id="loader"></div>
-    <p id="message">
+    <div id="message">
           <!-- message added dynamically -->
-    </p>
+    <div>
   </section>
   </div>
 

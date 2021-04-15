@@ -106,12 +106,20 @@ var idbApp = (function () {
     document.getElementById('save').disabled = true;
     document.getElementById('show').disabled = true;
 
+    // Not the "options" object passed into the call to geolocation below:
+    // GPS location can be quite slow (even more than a minute!) so geolocation defaults to
+    // a setting of enableHighAccuracy: false, which is pretty useless in rural areas with no wifi
+    // and poor mobile signals, as it means the app will very likely not use GPS location data at all.
+    // As for the other settings, timeout (in milliseconds) is self-explanatory, and I increased that to 15 seconds
+    // from 5 seconds when I increased the accuracy.
+    // The final property, maximumAge (in millisceonds), is how long the app should retain a location setting before
+    // trying to geolocate anew.
     if ('geolocation' in navigator) {
       navigator.geolocation.getCurrentPosition(async function (location) {
         logDebug('Geolocation did the callback');
         await idbApp.saveSnap(title, notes, photoasdataurl, location);
         if (postSaveFunc) postSaveFunc();
-      }, async function () { await idbApp.saveSnap(title, notes, photoasdataurl); if (postSaveFunc) postSaveFunc(); }, { timeout: 5000 }); // Second call is for no location
+      }, async function () { await idbApp.saveSnap(title, notes, photoasdataurl); if (postSaveFunc) postSaveFunc(); }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 }); // Second call is for no location
     } else {
       await idbApp.saveSnap(title, notes, photoasdataurl);
       if (postSaveFunc) postSaveFunc();
@@ -381,6 +389,83 @@ var idbApp = (function () {
     idbApp.processPageAndSave(postAfterSave);
   }
 
+  function editSnaps () {
+    clearText();
+    /* Iterate around the snaps on the page creating a map of the snaps keyed by id */
+    var snaps = document.getElementsByClassName('snap');
+    var snapsMap = new Map();
+    var snapId;
+    var snapTitle;
+    var snapNote;
+    var s = '';
+    var editsHaveErrored = false;
+
+    for (var i = 0; i < snaps.length; i++) {
+      snapId = snaps[i].id;
+
+      /* This should find the relevant info from within the first element of the given id:
+      at any level within the snap, so should be resistant to be being broken by any
+      extra formatting */
+      snapTitle = snaps[i].querySelector('#editableTitle').value;
+      snapNote = snaps[i].querySelector('#editableNote').value;
+
+      snapsMap.set(snapId, { title: snapTitle, note: snapNote });
+    }
+
+    /* Now we have the snap map loop around a cursor loop making any changes */
+
+    dbPromise.then(function (db) {
+      var tx = db.transaction('snaps', 'readwrite');
+      var store = tx.objectStore('snaps');
+      return store.openCursor();
+    }).then(async function editSnaps (cursor) {
+      if (!cursor) { return; }
+      const updateData = cursor.value;
+
+      logDebug('Cursored at:' + updateData.title);
+
+      var thisSnap = snapsMap.get('' + updateData.id);
+      var dataChanged = false;
+
+      if (updateData.title !== thisSnap.title) {
+        updateData.title = thisSnap.title;
+        dataChanged = true;
+      }
+
+      if (updateData.note !== thisSnap.note) {
+        updateData.note = thisSnap.note;
+        dataChanged = true;
+      }
+
+      /* This function is running in background anyway, but JavaScript is single threaded.
+      I want to know when all the snap updates have finished, so I'm just going to wait for them
+      and not complicate things by pretending that each indiviudal snap update is somehow happening
+      in parallel (they aren't). */
+
+      if (dataChanged) {
+        await cursor.update(updateData).then(function (updateResult) {
+          logDebug('Successfully updated a snap with id ' + updateResult + '.');
+        }).catch(function (e) {
+          editsHaveErrored = true;
+          handleError('Error when attempting to update snaps: ' + e);
+        });
+      }
+
+      return cursor.continue().then(editSnaps);
+    }).then(function () {
+      if (!editsHaveErrored) {
+        s = 'Edited snaps saved.';
+      } else {
+        s = 'Some snaps edits have failed. Please see the app log.';
+      }
+      showText(s);
+    }).catch(function (e) {
+      s = 'Error when attempting to save edited snaps';
+      handleError(s + ': ' + e);
+      showText(s + '.');
+    });
+  }
+
   function postSnaps () {
     clearText();
     idbApp.disablePostButtons();
@@ -471,26 +556,34 @@ var idbApp = (function () {
       var tx = db.transaction('snaps', 'readonly');
       var store = tx.objectStore('snaps');
       return store.openCursor();
-    }).then(function showRange (cursor) {
+    }).then(function showSnaps (cursor) {
       if (!cursor) { return; }
       logDebug('Cursored at:' + cursor.value.title);
-      s += '<h2>' + cursor.value.title + '</h2>';
-      s += '<p>' + cursor.value.note + '</p>';
+      /* <h2>Title</h2>
+  <input type="text" id="title" size="30" maxlength="100"/> </br>
+  <h2>Notes</h2>
+  <textarea id="notes" rows="4" cols="38" maxlength="10000"> </textarea> </br> */
+      s += '<span class="snap" id="' + cursor.value.id + '">';
+      /* s += '<input type="hidden" id="snapId" value="' + cursor.value.id + '">'; */
+      // s += '<h2 id="title">' + cursor.value.title + '</h2>';
+      s += '<p><input type="text" id="editableTitle" size="25" maxlength="100" value="' + cursor.value.title + '"/></p>';
+      s += '<p><textarea id="editableNote" rows="4" cols="30" maxlength="10000">' + cursor.value.note + '</textarea> </p>';
+      // s += '<p id="note">' + cursor.value.note + '</p>';
       s += '<p>   <img src="' + cursor.value.photoasdataurl + '"/></p>';
       s += '<h3> Time and Space </h3>';
       s += '<p> Time:' + cursor.value.datetime + '</p>';
       s += '<p> Latitude:' + cursor.value.latitude + '</p>';
       s += '<p> Longitude:' + cursor.value.longitude + '</p>';
       if (cursor.value.latitude !== 'Unknown' && cursor.value.longitude !== 'Unknown') {
-        s += '<p><a href="https://maps.google.com/maps?&z=15&q=' +
-          cursor.value.latitude + '+' + cursor.value.longitude + '&ll=' +
-          cursor.value.latitude + '+' + cursor.value.longitude +
+        s += '<p><a href="https://maps.google.com/maps/search/?api=1&query=' +
+          cursor.value.latitude + ',' + cursor.value.longitude +
           '" target="_blank"> Show Location </a></p>';
       }
       s += '<p>  <button id="submit" class="itemButton" onclick="idbApp.deleteSnap(' +
          cursor.value.id + ')">Delete Snap</button> </p>';
+      s += '</span>';
 
-      return cursor.continue().then(showRange);
+      return cursor.continue().then(showSnaps);
     }).then(function () {
       if (s === '') { s = '<p>No results.</p>'; }
       document.getElementById('notes').innerHTML = s;
@@ -543,7 +636,8 @@ var idbApp = (function () {
     var elems = document.querySelectorAll('[id="message"]');
 
     for (var i = 0; i < elems.length; i++) {
-      elems[i].textContent = responseAsText;
+      // elems[i].textContent = responseAsText;
+      elems[i].innerHTML = responseAsText;
     }
   }
 
@@ -818,6 +912,7 @@ var idbApp = (function () {
     showSnapsAfterSave: (showSnapsAfterSave),
     addSnap: (addSnap),
     displaySnaps: (displaySnaps),
+    editSnaps: (editSnaps),
     postSnaps: (postSnaps),
     postSnapsAfterSave: (postSnapsAfterSave),
     previewPhoto: (previewPhoto),
