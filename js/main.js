@@ -476,17 +476,59 @@ var idbApp = (function () {
       fnserver = 'http://localhost:5000/';
     }
 
-    var notesList = [];
+    var snapsList = [];
 
-    dbPromise.then(function (db) {
+    var batches = [];
+
+    batches.push(snapsList); // Hoping this just adding a pointer and not just copying the content!
+
+    const defaultBatchSize = '10';
+
+    var batchSize = defaultBatchSize;
+
+    var batchCount = 1;
+
+    var snapsForThisBatch = 0;
+
+    var batchFull = false;
+
+    var snapsTotal = 0;
+
+    var batchesPosted = 0;
+
+    var batchesNotPosted = 0;
+
+    var resultMessage = '';
+
+    var appConfig;
+
+    var batchErrored;
+
+    const serverUnreachable = 'Cannot submit notes as the target server appears to be unreachable.';
+
+    dbPromise.then(async function (db) {
+      appConfig = await getConfig();
+      if (appConfig && appConfig.batchSize !== defaultBatchSize && appConfig.batchSize >= 1 && appConfig.batchSize <= 100) {
+        batchSize = appConfig.batchSize;
+      }
       var tx = db.transaction('snaps', 'readonly');
       var store = tx.objectStore('snaps');
       return store.openCursor();
-    }).then(function showRange (cursor) {
+    }).then(function showSnaps (cursor) {
       if (!cursor) { return; }
       logDebug('Cursored at:' + cursor.value.title);
 
-      var noteRecord = {
+      snapsForThisBatch++; // so this will start at 1.
+      snapsTotal++;
+
+      if (batchFull) { // so we need to start a new batch
+        // We need to create a new batch.
+        batchCount++;
+        snapsList = []; // repoint the snapsList closure at an empty array
+        batches.push(snapsList); // add the new snapsList to the batches array
+      }
+
+      var snapRecord = {
         title: cursor.value.title,
         note: cursor.value.note,
         photoasdataurl: cursor.value.photoasdataurl,
@@ -495,27 +537,73 @@ var idbApp = (function () {
         longitude: cursor.value.longitude
       };
 
-      notesList.push(noteRecord);
+      snapsList.push(snapRecord);
 
-      return cursor.continue().then(showRange);
-    }).then(getConfig).then(function (appConfig) {
-      if (notesList.length > 0 && appConfig.mailTo) {
-        // NB If adding any CUSTOM headers ensure they are set within accept-headers in any receiving CORS enabled server!
-        // NB DO NOT set a content-type header of application/json here, however tempting that might seem
-        // as my cors server would not parse the json body with that set! Possibly the photos are not
-        // compliant with application/json even when base 64 encoded.
-        window.fetch(fnserver, {
-          method: 'POST',
-          headers: { 'configured-mailto': appConfig.mailTo },
-          body: JSON.stringify(notesList)
+      // Have we now filled up the batch?
+      // NB batches will fill up instantly if batch size is only 1
+      if (snapsForThisBatch === parseInt(batchSize, 10)) {
+        batchFull = true;
+        snapsForThisBatch = 0; // We can't add any more snaps to this batch...any further snaps will have to count towards the next batch
+      } else {
+        batchFull = false;
+      }
 
-        })
-          .then(validateResponse)
-          .then(readSubmitResponseAsText)
-          .then(showText)
-          .catch(handleError).finally(function () {
-            idbApp.enablePostButtons();
-          });
+      return cursor.continue().then(showSnaps);
+    }).then(async function () {
+      if (snapsTotal > 0 && appConfig.mailTo) {
+        for (var i = 0; i < batchCount; i++) {
+          batchErrored = false; // Assume success unless told otherwise
+          // NB If adding any CUSTOM headers ensure they are set within accept-headers in any receiving CORS enabled server!
+          // NB DO NOT set a content-type header of application/json here, however tempting that might seem
+          // as my cors server would not parse the json body with that set! Possibly the photos are not
+          // compliant with application/json even when base 64 encoded.
+          await window.fetch(fnserver, { // There's no harm here in the await, the JS will be single threaded anyway.
+            method: 'POST',
+            headers: { 'configured-mailto': appConfig.mailTo },
+            body: JSON.stringify(batches[i])
+
+          }).then(function (response) {
+            if (response.url.search('offline.html') !== -1) {
+              batchErrored = true;
+              return serverUnreachable;
+            } else if (!response.ok) {
+              batchErrored = true;
+              return response.text(); // We still want to try and resolve the response body as that may contain a specific error message.
+            } else {
+              // NB this is a asynchronous, promise generating call to get the response body.
+              // In theory, at this point, it should contain a success message
+              // but it could still fail if something is wrong with the response, which itself is most
+              // likely to mean a problem with the server or network and we can't assume the batch was posted.
+              return response.text();
+            }
+          }).then(function (messageAsText) {
+            // Have to do this as response.text() returns yet another promise, to get the response body, that we have to resolve with a then
+            resultMessage = messageAsText;
+            if (!batchErrored) { // if have successfully reached here and haven't been told that the batch has already failed.
+              batchesPosted++;
+            } else {
+              if (messageAsText === serverUnreachable) {
+                logInfo(messageAsText);
+              } else {
+                logError(messageAsText);
+              }
+              batchesNotPosted++;
+            }
+          })
+            .catch(function (e) {
+              batchesNotPosted++;
+              resultMessage = 'Error while attempting to post snaps: ' + e;
+              handleError(e);
+            });
+        } // End of loop around the batches
+        // Tell the user what's happened...
+        idbApp.enablePostButtons();
+        if (batchesPosted > 0 && batchesNotPosted > 0) {
+          // SOME batches of snaps seem to have posted, but not all
+          showText('Some snaps have posted but not all. Check the app log for more information.');
+        } else {
+          showText(resultMessage);
+        }
       } else {
         idbApp.enablePostButtons();
         if (!(appConfig.mailTo)) {
@@ -524,8 +612,6 @@ var idbApp = (function () {
           window.alert('Nothing to post.');
         }
       }
-    }).catch(function () {
-      idbApp.enablePostButtons();
     });
   }
 
@@ -617,7 +703,7 @@ var idbApp = (function () {
     }); // Have to have error logging here as this function has started its own promise chain.;
   }
 
-  function readSubmitResponseAsText (response) {
+  /* function readSubmitResponseAsText (response) {
     if (response.url.search('offline.html') !== -1) {
       return 'Cannot submit notes as the target server appears to be unreachable.';
     }
@@ -630,7 +716,7 @@ var idbApp = (function () {
       // Allow the response text to be shown instead...
     }
     return response;
-  }
+  } */
 
   function showText (responseAsText) {
     var elems = document.querySelectorAll('[id="message"]');
@@ -672,10 +758,12 @@ var idbApp = (function () {
 
   async function processThenSaveConfig (postSaveFunc) {
     clearText();
-
-    var mailTo = getAddressList();
+    // The convention we have adopted, to keep it simple, is that the id of html element
+    // containing the config value is the same as the name of the config item.
+    var mailTo = getAddressList(); // Though there is a bit of special processing around email addresses.
     var appLogLevel = document.getElementById('appLogLevel').value;
     var defaultTitle = document.getElementById('defaultTitle').value;
+    var batchSize = document.getElementById('batchSize').value;
 
     var config = [
       {
@@ -689,6 +777,10 @@ var idbApp = (function () {
       {
         name: 'defaultTitle',
         value: defaultTitle
+      },
+      {
+        name: 'batchSize',
+        value: batchSize
       }
     ];
 
@@ -732,9 +824,11 @@ var idbApp = (function () {
       return Promise.all(config.map(function (configRecord) {
         logDebug('Adding config record for setting: ' + configRecord.name);
         if (configRecord.name === 'appLogLevel') {
+          // Instantly set the value "in memory", so the app can use without having to retrieve from indexeddb.
           idbApp.setAppLogLevel(configRecord.value);
         }
         if (configRecord.name === 'defaultTitle') {
+          // Instantly set the value "in memory", so the app can use without having to retrieve from indexeddb.
           idbApp.setDefaultTitle(configRecord.value);
         }
         return store.put(configRecord); // This should update using the name of the config field as a key, or add if the config field is not yet in the object store.
@@ -755,6 +849,7 @@ var idbApp = (function () {
     var fieldName = '';
     clearText();
     document.getElementById('appLogLevel').value = 1; // Default app logging level to 1...if it is set it'll get reset as we read back the config settings below
+    document.getElementById('batchSize').value = 10; // Default batch size to 10...if it is set it'll get reset as we read back the config settings below
     document.getElementById('defaultTitle').value = idbApp.getDefaultTitle(); // Default the default title to "MetaSnap: " or whatever the current value is the idbApp namespace.
     dbPromise.then(function (db) {
       var tx = db.transaction('config', 'readonly');
@@ -780,6 +875,8 @@ var idbApp = (function () {
           }
         }
       } else {
+        // The convention we have adopted, to keep it simple, is that the id of html element
+        // containing the config value is the same as the name of the config item.
         document.getElementById(fieldName).value = cursor.value.value;
       }
 
