@@ -148,11 +148,97 @@ var idbApp = (function () {
         longitude = location.coords.longitude;
       }
       var datetime = new Date();
+
+      // Do the EXIF processing to all write the metadata we have captured into the photo itself
+      // EXIF is the industry standard for photo metadata.
+      // NB we are attempting to assign the appropriate metasnapper metadata to all arguably
+      // relevant EXIF fields as there does not seem to be much standardisation in how
+      // EXIF is "read"/interpreted by other software.
+      // Also, as I don't think anything other than specialsied software reports on the location
+      // data it is sensible to also duplicate that in the comments.
+      // This will need error handling so that the app can still work even if the EXIF standard has
+      // changed unexpectedly!
+      // It might also be an idea to organise the error trapping so that core fields, those
+      // that appear in Windows AND in the main EXIF spec, are set separately
+      // from more optional fields that do not.
+      // Also remember edits.
+      /* var zeroth = {};
+      var exif = {};
+      var gps = {};
+      // On windows the following single line results in the title appearing in the title and subject of
+      // the file>properties>details
+      zeroth[window.piexif.ImageIFD.ImageDescription] = title; // Core
+
+      // Date and time
+      // According to the official EXIF spec the format is YYYY:MM:DD HH:MM:SS
+      // for DateTime, DateTimeOriginal and DateTimeDigitized
+      var exifMonth = ('0' + (datetime.getMonth() + 1)).slice(-2); // Jan is 0, plus single digit months need to be zero padded
+      // ALSO pad the day, hour, minutes and seconds!
+      var exifDay = ('0' + datetime.getDate()).slice(-2);
+      var exifHour = ('0' + datetime.getHours()).slice(-2);
+      var exifMinutes = ('0' + datetime.getMinutes()).slice(-2);
+      var exifSeconds = ('0' + datetime.getSeconds()).slice(-2);
+      var exifDate = '' + datetime.getFullYear() + ':' + exifMonth + ':' + exifDay + ' ' +
+      exifHour + ':' + exifMinutes + ':' + exifSeconds;
+
+      // Core, but doesn't become the date taken viewable in Windows, file properties> details.
+      zeroth[window.piexif.ImageIFD.DateTime] = exifDate;
+
+      // In theory it is also possible to set an ImageIFD.TimeZoneOffset that represents the
+      // difference between UTC and the time recorded, in hours.
+      // And there's a Javascript method that returns something very similar,
+      // getTimezoneOffset(), but in minutes.
+      // Though TimeZoneOffset is not part of the core EXIF spec and
+      // doesn't seem to be widely used at all, in fact the default EXIF
+      // time standard seems to be that any time recorded is local to the
+      // recorded location.
+      // However, during BST UTC is an hour behind and piexifjs errors if
+      // TimeZoneOffset is set to a negative number (positive numbers work OK)
+      // which I suspect is a bug.
+      // So, long story short, not bothering with TimeZoneOffset
+      // (and I don't think a lot else bothers with it either!)
+      // (It's possible that the ImageIFD.TimeZoneOffset is local time - UTC,
+      // as against JS which is UTC - local time, and therefore the sign is reversed
+      // and the error is caused by a difference between the offset and location
+      // info, but this feels contrived, and
+      // the ImageIFD.TimeZoneOffset is very poorly documented.
+      // If I make that assumption but it's wrong I am risking building in
+      // an obscure bug (app wouldn't work in time zones where local time is behind UTC
+      // so the offset would again be negative).)
+
+      // Core and the date that is viewable as the date taken through windows file properties> details.
+      exif[window.piexif.ExifIFD.DateTimeOriginal] = exifDate;
+      // Core and also viewable as the date taken through windows file properties> details.
+      // I don't know which one of these two dates takes priority in Windows if they are different!
+      exif[window.piexif.ExifIFD.DateTimeDigitized] = exifDate;
+
+      // This is core and viewable as "comments" through windows file properties> details.
+      exif[window.piexif.ExifIFD.UserComment] = notes + '\nAt location: ' +
+      location.coords.latitude + ' latitude and ' + location.coords.longitude + ' longitude.'; // Core
+
+      // Location
+      gps[window.piexif.GPSIFD.GPSLatitudeRef] = location.coords.latitude < 0 ? 'S' : 'N';
+      gps[window.piexif.GPSIFD.GPSLatitude] = window.piexif.GPSHelper.degToDmsRational(location.coords.latitude);
+      gps[window.piexif.GPSIFD.GPSLongitudeRef] = location.coords.longitude < 0 ? 'W' : 'E';
+      gps[window.piexif.GPSIFD.GPSLongitude] = window.piexif.GPSHelper.degToDmsRational(location.coords.longitude);
+
+      var exifObj = { '0th': zeroth, Exif: exif, GPS: gps };
+      var exifStr = window.piexif.dump(exifObj);
+
+      var enrichedphotoasdataurl = window.piexif.insert(exifStr, photoasdataurl);
+      */
+      try {
+        var enrichedphotoasdataurl = idbApp.writeExifMetadata(title, notes, photoasdataurl, location.coords.latitude, location.coords.longitude, datetime);
+      } catch (e) {
+        // Error should have already been logged by the writeExifMEtadata method
+        // We just need to restore the original photo metadata just in case...
+        enrichedphotoasdataurl = photoasdataurl;
+      }
       var items = [
         {
           title: title,
           note: notes,
-          photoasdataurl: photoasdataurl,
+          photoasdataurl: enrichedphotoasdataurl,
           datetime: datetime,
           latitude: latitude,
           longitude: longitude
@@ -177,6 +263,102 @@ var idbApp = (function () {
         document.getElementById('show').disabled = false;
       });
     });
+  }
+
+  function writeExifMetadata (title, notes, photoasdataurl, latitude, longitude, datetime) {
+    // Do the EXIF processing to all write the metadata we have captured into the photo itself
+    // EXIF is the industry standard for photo metadata.
+    // NB we are attempting to assign the appropriate metasnapper metadata to all arguably
+    // relevant EXIF fields as there does not seem to be much standardisation in how
+    // EXIF is "read"/interpreted by other software, provided those fields are easily set
+    // and not too "fragile".
+    // Also, as I don't think anything other than specialised software reports on the location
+    // data it is sensible to also duplicate that in the comments.
+    // This will need error handling so that the app can still work even if the EXIF standard has
+    // changed unexpectedly!
+    // It might also be an idea to organise the error trapping so that core fields, those
+    // that appear in Windows AND in the main EXIF spec, are set separately
+    // from more optional fields that do not, but tags don't fail on a "one at a time basis":
+    // rather they succeed or fail altogether when the dump method is called, and currently
+    // we are only setting tags in the main EXIF spec anyway (though not all appear in Windows).
+    // Also remember edits.
+    try {
+      var zeroth = {};
+      var exif = {};
+      var gps = {};
+      // On windows the following single line results in the title appearing in the title and subject of
+      // the file>properties>details
+      zeroth[window.piexif.ImageIFD.ImageDescription] = title; // Core
+
+      // Date and time
+      // According to the official EXIF spec the format is YYYY:MM:DD HH:MM:SS
+      // for DateTime, DateTimeOriginal and DateTimeDigitized
+      var exifMonth = ('0' + (datetime.getMonth() + 1)).slice(-2); // Jan is 0, plus single digit months need to be zero padded
+      // ALSO pad the day, hour, minutes and seconds!
+      var exifDay = ('0' + datetime.getDate()).slice(-2);
+      var exifHour = ('0' + datetime.getHours()).slice(-2);
+      var exifMinutes = ('0' + datetime.getMinutes()).slice(-2);
+      var exifSeconds = ('0' + datetime.getSeconds()).slice(-2);
+      var exifDate = '' + datetime.getFullYear() + ':' + exifMonth + ':' + exifDay + ' ' +
+      exifHour + ':' + exifMinutes + ':' + exifSeconds;
+
+      // Core, but doesn't become the date taken viewable in Windows, file properties> details.
+      zeroth[window.piexif.ImageIFD.DateTime] = exifDate;
+
+      // In theory it is also possible to set an ImageIFD.TimeZoneOffset that represents the
+      // difference between UTC and the time recorded, in hours.
+      // And there's a Javascript method that returns something very similar,
+      // getTimezoneOffset(), but in minutes.
+      // Though TimeZoneOffset is not part of the core EXIF spec and
+      // doesn't seem to be widely used at all, in fact the default EXIF
+      // time standard seems to be that any time recorded is local to the
+      // recorded location.
+      // However, during BST UTC is an hour behind and piexifjs errors if
+      // TimeZoneOffset is set to a negative number (positive numbers work OK)
+      // which I suspect is a bug.
+      // So, long story short, not bothering with TimeZoneOffset
+      // (and I don't think a lot else bothers with it either!)
+      // (It's possible that the ImageIFD.TimeZoneOffset is local time - UTC,
+      // as against JS which is UTC - local time, and therefore the sign is reversed
+      // and the error is caused by a difference between the offset and location
+      // info, but this feels contrived, and
+      // the ImageIFD.TimeZoneOffset is very poorly documented.
+      // If I make that assumption but it's wrong I am risking building in
+      // an obscure bug (app wouldn't work in time zones where local time is behind UTC
+      // so the offset would again be negative).)
+
+      // Core and the date that is viewable as the date taken through windows file properties> details.
+      exif[window.piexif.ExifIFD.DateTimeOriginal] = exifDate;
+      // Core and also viewable as the date taken through windows file properties> details.
+      // I don't know which one of these two dates takes priority in Windows if they are different!
+      exif[window.piexif.ExifIFD.DateTimeDigitized] = exifDate;
+
+      // This is core and viewable as "comments" through windows file properties> details.
+      exif[window.piexif.ExifIFD.UserComment] = notes + '\nAt location: ' +
+      latitude + ' latitude and ' + longitude + ' longitude.'; // Core
+
+      // Location
+      gps[window.piexif.GPSIFD.GPSLatitudeRef] = latitude < 0 ? 'S' : 'N'; // Core
+      gps[window.piexif.GPSIFD.GPSLatitude] = window.piexif.GPSHelper.degToDmsRational(latitude); // Core
+      gps[window.piexif.GPSIFD.GPSLongitudeRef] = longitude < 0 ? 'W' : 'E'; // Core
+      gps[window.piexif.GPSIFD.GPSLongitude] = window.piexif.GPSHelper.degToDmsRational(longitude); // Core
+
+      var exifObj = { '0th': zeroth, Exif: exif, GPS: gps };
+      var exifStr = window.piexif.dump(exifObj);
+    } catch (e) {
+      logError('Error attempting to generate EXIF metadata: ' + e);
+      return photoasdataurl; // This is save to do as, at this point, this method hasn't touched the photo data.
+    }
+
+    // var enrichedphotoasdataurl = window.piexif.insert(exifStr, photoasdataurl);
+    try {
+      return window.piexif.insert(exifStr, photoasdataurl);
+    } catch (e) {
+      // If the error has occurred here the photo data may have been corrupted:
+      // so the caller should catch this error and attmept to use the original photo data instead.
+      logError('Error attempting to write EXIF metadata into the photo: ' + e);
+      throw Error('Error attempting to write EXIF metadata into the photo: ' + e);
+    }
   }
 
   async function handleError (errObject, severity) {
@@ -435,6 +617,16 @@ var idbApp = (function () {
       if (updateData.note !== thisSnap.note) {
         updateData.note = thisSnap.note;
         dataChanged = true;
+      }
+
+      // If either the title or the note has changed you need to edit the exif metadata here
+      if (dataChanged) {
+        try {
+          updateData.photoasdataurl = writeExifMetadata(thisSnap.title, thisSnap.note, updateData.photoasdataurl, updateData.latitude, updateData.longitude, updateData.datetime);
+        } catch (e) {
+          // Error should already have been logged by the writeExifMetadata method
+          // Don't update the photo data...
+        }
       }
 
       /* This function is running in background anyway, but JavaScript is single threaded.
@@ -1036,6 +1228,7 @@ var idbApp = (function () {
     getAppLogLevel: (getAppLogLevel),
     setAppLogLevel: (setAppLogLevel),
     getDefaultTitle: (getDefaultTitle),
-    setDefaultTitle: (setDefaultTitle)
+    setDefaultTitle: (setDefaultTitle),
+    writeExifMetadata: (writeExifMetadata)
   };
 })();
