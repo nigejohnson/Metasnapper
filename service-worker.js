@@ -3,7 +3,7 @@
 // Plus, giving the cache a new name, is a sensible way to avoid any confusion with an out of date cache.
 // Also note that, by default, the new service worker will install but remain inactive until any
 // pages using an old version of the service worker have been unloaded.
-const cacheName = 'cache-v1.2.9'; // Change this whenever the version of the app changes, or NO changes will be recached!
+const cacheName = 'cache-v1.2.123'; // Change this whenever the version of the app changes, or NO changes will be recached!
 const precacheResources = [
   '/',
   'index.html',
@@ -12,9 +12,15 @@ const precacheResources = [
   'configfragment.html',
   'applogfragment.html',
   'offline.html',
-  'js/idb.js',
+  'js/lib/idb.js',
+  'js/lib/piexif.js',
+  'js/lib/vue.global.prod.js',
+  'js/lib/vue-router.global.prod.js',
   'js/main.js',
-  'js/piexif.js',
+  'js/index.js',
+  'js/applog.js',
+  'js/config.js',
+  'js/showsnaps.js',
   'manifest.json',
   'favicon.ico',
   'images/touch/icon-128x128.png',
@@ -52,8 +58,8 @@ self.addEventListener('install', event => {
     self.skipWaiting().then(function () {
       self.caches.open(cacheName).then(function (cache) {
         var cachePromises = precacheResources.map(function (precacheResource) {
-        // This constructs a new URL object using the service worker's script location as the base
-        // for relative URLs.
+          // This constructs a new URL object using the service worker's script location as the base
+          // for relative URLs.
           var url = new URL(precacheResource, self.location.href);
 
           // The cache: no-store header here is key
@@ -63,7 +69,7 @@ self.addEventListener('install', event => {
           return self.fetch(url, { cache: 'no-store' }).then(function (response) {
             if (response.status >= 400) {
               throw new Error('request for ' + precacheResource +
-              ' failed with status ' + response.statusText);
+                ' failed with status ' + response.statusText);
             }
 
             return cache.put(precacheResource, response);

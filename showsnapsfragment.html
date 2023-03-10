@@ -1,17 +1,20 @@
 
 <h1>Show Snaps</h1>
-  <button id="add" class="pageButton" onclick="idbApp.addSnap()">Add Snaps</button></br>
+  <button id="add" class="pageButton" onclick="mainModule.addSnap()">Add Snaps</button></br>
   <section class="text-container">
   <div id="loader"></div>
   <div id="message"></div>
   </section>
-  <button id="post" class="pageButton" onclick="idbApp.editSnaps()">Save Edits</button></br>
-  <button id="post" class="pageButton" onclick="idbApp.postSnaps()">Post Snaps</button></br>
+  <button id="post" class="pageButton" onclick="showsnapsModule.editSnaps()">Save Edits</button></br>
+  <button id="post" class="pageButton" onclick="mainModule.postSnaps()">Post Snaps</button></br>
+  <div id="pagination">Showing snaps from snap number <span id="snapStartPos"></span> to snap number <span id="snapEndPos"></span></div>
   <div id="notes"></div>
-  <button id="add" class="pageButton" onclick="idbApp.addSnap()">Add Snaps</button></br>
+  <button id="add" class="pageButton" onclick="mainModule.addSnap()">Add Snaps</button></br>
   <section class="text-container">
   <div id="loader"></div>
   <div id="message"></div>
   </section>
-  <button id="post" class="pageButton" onclick="idbApp.editSnaps()">Save Edits</button></br>  
-  <button id="post" class="pageButton" onclick="idbApp.postSnaps()">Post Snaps</button></br>  
+  <button id="post" class="pageButton" onclick="showsnapsModule.editSnaps()">Save Edits</button></br>  
+  <button id="post" class="pageButton" onclick="mainModule.postSnaps()">Post Snaps</button></br>
+  <button id="pageUp" class="pageButton" onclick="showsnapsModule.processPageAndPageUp()">Page Up</button></br>  
+  <button id="pageDown" class="pageButton" onclick="showsnapsModule.processPageAndPageDown()">Page Down</button></br> 
