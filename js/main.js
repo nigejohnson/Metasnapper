@@ -53,11 +53,17 @@ var mainModule = (function () {
 
 
   function deleteSnap(id) {
+    let snapStartPos = 1;
+    let snapEndPos = 10;
+    let startPosEl = document.getElementById('snapStartPos');
+    if (startPosEl) { snapStartPos = parseInt(startPosEl.innerHTML) }
+    let endPosEl = document.getElementById('snapEndPos');
+    if (endPosEl) { snapEndPos = parseInt(endPosEl.innerHTML) };
     dbPromise.then(function (db) {
       let tx = db.transaction('snaps', 'readwrite');
       let store = tx.objectStore('snaps');
       store.delete(id);
-      mainModule.displaySnaps();
+      mainModule.displaySnaps(snapStartPos, snapEndPos);
     }).catch(function (e) {
       handleError(e);
     });
