@@ -1,44 +1,43 @@
-<div id="version">MetaSnapper Version 1.3.1</div>
-  <h1>App Configuration</h1>
-  <div id="emails">
+<div id="version">MetaSnapper Version 1.4.0</div>
+<h1>App Configuration</h1>
+<div id="emails">
   <h2>Send Snaps to Email Address:</h2>
   <span id="addressList">
-  <div id=anEmail1>
-  <input type="email" id="mailTo" size="44" maxlength="320"/>
-  </div> 
+    <div id=anEmail1>
+      <input type="email" id="mailTo" size="44" maxlength="320" />
+    </div>
   </span>
 </div>
 <button id="home" class="itemButton" onclick="configModule.addEmail()">Add Another Email Address</button></br>
 <div id="miscdefaults">
   <h2>Default Title</h2>
-  <input type="text" id="defaultTitle" size="30" maxlength="100"/>
+  <input type="text" id="defaultTitle" size="30" maxlength="100" />
 </div></br>
 <div id="diagnostics">
-<h2>Configure App Diagnostics</h2>
-<label for="appLogLevel">Set an App Logging Level:</label>
+  <h2>Configure App Diagnostics</h2>
+  <label for="appLogLevel">Set an App Logging Level:</label>
 
-<select name="appLogLevel" id="appLogLevel">
-  <option value=0>DEBUG</option>
-  <option value=1>INFO</option>
-  <option value=2>WARN</option>
-  <option value=3>ERROR</option>
-</select> 
+  <select name="appLogLevel" id="appLogLevel">
+    <option value=0>DEBUG</option>
+    <option value=1>INFO</option>
+    <option value=2>WARN</option>
+    <option value=3>ERROR</option>
+  </select>
 </div>
 <div id="advanced">
   <h2>Advanced Settings</h2>
   <label for="batchSize">Post Snaps in Batches of:</label>
-  
+
   <select name="batchSize" id="batchSize">
     <option value=1>1</option>
     <option value=2>2</option>
     <option value=5>5</option>
     <option value=10>10</option>
     <option value=20>20</option>
-  </select> 
-  </div>
+  </select>
+</div>
 </br></br>
-  <button id="save" class="pageButton" onclick="configModule.processThenSaveConfig()">Save</button></br>
-  <button id="config" class="pageButton" onclick="configModule.applogAfterSave()">Show App Log</button></br>
-  <button id="home" class="pageButton" onclick="mainModule.addSnap()">Add Snaps</button></br>
+<button id="save" class="pageButton" onclick="configModule.processThenSaveConfig()">Save</button></br>
+<button id="config" class="pageButton" onclick="configModule.applogAfterSave()">Show App Log</button></br>
+<button id="home" class="pageButton" onclick="mainModule.addSnap()">Add Snaps</button></br>
 <div id="message"></div>
-  

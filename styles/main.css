@@ -19,15 +19,24 @@ html {
 
 /* These two font size settings are necessary to stop automatic zoom in on an iPhone. 
 Basically Apple regard any font sizes less than 16px as too small. */
-body { font-size: 17px; }
-input[type="text"],input[type="email"],textarea,select,select:focus { font-size: 17px; } 
+body {
+  font-size: 17px;
+}
+
+input[type="text"],
+input[type="email"],
+textarea,
+select,
+select:focus {
+  font-size: 17px;
+}
 
 div[id="pageContent"] {
   align-items: center;
   background-color: #5049af;
   display: flex;
   flex-direction: column;
-  font-family: 'Roboto','Helvetica','Arial',sans-serif;
+  font-family: 'Roboto', 'Helvetica', 'Arial', sans-serif;
   justify-content: space-evenly;
   margin: 0;
   min-height: 100vh;
@@ -35,9 +44,9 @@ div[id="pageContent"] {
 
 header {
   background-color: #92a8d1;
-  box-shadow: 0 2px 2px 0 rgba(0,0,0,.14),
-              0 3px 1px -2px rgba(0,0,0,.2),
-              0 1px 5px 0 rgba(0,0,0,.12);
+  box-shadow: 0 2px 2px 0 rgba(0, 0, 0, .14),
+    0 3px 1px -2px rgba(0, 0, 0, .2),
+    0 1px 5px 0 rgba(0, 0, 0, .12);
   box-sizing: border-box;
   display: flex;
   justify-content: center;
@@ -69,13 +78,14 @@ header {
   position: relative;
   text-align: center;
   vertical-align: middle;
- }
+}
 
 .pageButton {
   background-color: #ba92d1;
   border: none;
   border-radius: 50%;
   box-shadow: 0 2px 2px 0 rgba(0, 0, 0, 0.14), 0 3px 1px -2px rgba(0, 0, 0, 0.2), 0 1px 5px 0 rgba(0, 0, 0, 0.12);
+  color: black;
   cursor: pointer;
   display: inline-block;
   font-family: "Roboto", "Helvetica", "Arial", sans-serif;
@@ -159,7 +169,7 @@ footer {
 }
 
 input[type="file"] {
-    display: none;
+  display: none;
 }
 
 input[type="email"] {
@@ -168,21 +178,21 @@ input[type="email"] {
 }
 
 div[id="photo_preview"] {
-    display: none;
+  display: none;
 }
 
 .custom-file-upload {
-    border: 1px solid #ba92d1;  
-    background-color: #ba92d1;
-    font-weight: bold;
-    border-radius: 50%;
-    display: inline-block;
-    padding: 6px 12px;
-    cursor: pointer;
+  border: 1px solid #ba92d1;
+  background-color: #ba92d1;
+  font-weight: bold;
+  border-radius: 50%;
+  display: inline-block;
+  padding: 6px 12px;
+  cursor: pointer;
 }
 
-label[id="photo_label"]{
-  border: 1px solid #ba92d1;  
+label[id="photo_label"] {
+  border: 1px solid #ba92d1;
   background-color: #ba92d1;
   font-weight: bold;
   border: none;
@@ -206,7 +216,7 @@ label[id="photo_label"]{
 
 /* Center the loader */
 #loader {
-  position: absolute; 
+  position: absolute;
   left: 50%;
   /* top: 50%; */
   z-index: 1;
@@ -222,13 +232,23 @@ label[id="photo_label"]{
 }
 
 @-webkit-keyframes spin {
-  0% { -webkit-transform: rotate(0deg); }
-  100% { -webkit-transform: rotate(360deg); }
+  0% {
+    -webkit-transform: rotate(0deg);
+  }
+
+  100% {
+    -webkit-transform: rotate(360deg);
+  }
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* Add animation to "page content" */
@@ -241,13 +261,27 @@ label[id="photo_label"]{
 }
 
 @-webkit-keyframes animatebottom {
-  from { bottom:-100px; opacity:0 } 
-  to { bottom:0px; opacity:1 }
+  from {
+    bottom: -100px;
+    opacity: 0
+  }
+
+  to {
+    bottom: 0px;
+    opacity: 1
+  }
 }
 
-@keyframes animatebottom { 
-  from{ bottom:-100px; opacity:0 } 
-  to{ bottom:0; opacity:1 }
+@keyframes animatebottom {
+  from {
+    bottom: -100px;
+    opacity: 0
+  }
+
+  to {
+    bottom: 0;
+    opacity: 1
+  }
 }
 
 
@@ -262,11 +296,11 @@ input:valid {
 }
 
 #title {
-   font-size: 17px;
+  font-size: 17px;
 }
 
 #notes {
-   font-size: 17px;
+  font-size: 17px;
 }
 
 #editableTitle {
@@ -280,4 +314,4 @@ input:valid {
   align-items: center;
   background-color: #92a8d1;
   font-size: 17px;
-  }
+}
