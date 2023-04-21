@@ -328,8 +328,9 @@ var mainModule = (function () {
     clearText();
     mainModule.disablePostButtons();
     let fnserver;
-    if (window.location.hostname.includes('heroku')) {
-      fnserver = 'https://metasnapper-server.herokuapp.com/';
+    if (window.location.hostname.includes('b4a')) {
+      //fnserver = 'https://metasnapper-server.herokuapp.com/';
+      fnserver = 'https://metasnapperserver-nigeljohnson.b4a.run/';
     } else {
       fnserver = 'http://localhost:5000/';
     }
