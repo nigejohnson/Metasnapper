@@ -95,12 +95,12 @@ var showsnapsModule = (function () {
 
                 // If either the title or the note has changed you need to edit the exif metadata here
                 if (dataChanged) {
-                    try {
-                        updateData.photoasdataurl = writeExifMetadata(thisSnap.title, thisSnap.note, updateData.photoasdataurl, updateData.latitude, updateData.longitude, updateData.datetime);
-                    } catch (e) {
-                        // Error should already have been logged by the writeExifMetadata method
-                        // Don't update the photo data...
-                    }
+                    // try {
+                    updateData.photoasdataurl = mainModule.writeExifMetadata(thisSnap.title, thisSnap.note, updateData.photoasdataurl, updateData.latitude, updateData.longitude, updateData.datetime);
+                    //} catch (e) {
+                    // Error should already have been logged by the writeExifMetadata method
+                    // Don't update the photo data...
+                    //}
                 }
 
                 /* This function is running in background anyway, but JavaScript is single threaded.
