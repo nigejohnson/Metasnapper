@@ -7,8 +7,9 @@ The use case implemented is the adding of metadata to photos. Metadata is both b
 -	Offline storage of data on the device itself, using indexedDB, specifically the photos and associated metadata.
 -	Integration with a cloud-based web service, specifically an email sending service, to distribute the photos.
 -	Graceful handling of situations where the email sending service is unavailable, e.g., due to lack of connectivity (*).
--	 Use of local offline storage to store configuration settings and diagnostic logging for the application itself.
-> (* Unfortunately, due to the discontinuation of free Heroku hosting, the email sending service is currently unavailable. The email sending service is called Metasnapper-server, and the source code, built using the Node Express framework, is here: nigejohnson/Metasnapper-server (github.com). An alternative version, using the Node Hapi framework is here: nigejohnson/Hapi-metasnapper-server: A server for the "metasnapper" PWA proof of concept but written using the Hapi framework (github.com). ) 
+-   Use of local offline storage to store configuration settings and diagnostic logging for the application itself.
+-   Simple integration with Google Maps, via a "Show Location" button, to prove the metasnaps contain correct locational data. 
+> (* The email sending service is called Metasnapper-server, and the source code, built using the Node Express framework, is here: nigejohnson/Metasnapper-server (github.com). An alternative version, using the Node Hapi framework is here: nigejohnson/Hapi-metasnapper-server: A server for the "metasnapper" PWA proof of concept but written using the Hapi framework (github.com). ) 
 
 ## Prerequisites
 A git install so that the repo can easily be cloned locally, e.g., https://git-scm.com/download/win.
@@ -43,8 +44,13 @@ To continue to work offline, a Progressive Web App needs to be cached by a local
 There are currently no automated tests. Sorry: that just wasn't as interesting as the PWA features!
 
 ## Deploying to a device
-This was being accomplished by hosting the application on Heroku, simply navigating to the URL of the Heroku hosted application in a browser on the target device, and following the device specific options for installing the app on the device's home screen (at which point the app becomes indistinguishable from any other mobile app). Simplified deployment is one of the big advantages of the PWA model. 
-With the discontinuation of free Heroku hosting, however, this approach is currently not feasible. Alternatives are being sought.
+Currently deployment is via the Back4App free tier (previously it was via the Heroku free tier until that was discontinued).
+Back4App reads the code to deploy directly from the master branch of this github repo.
+A simple dockerfile, included in the root of this folder, tells Back4App how to build and launch the app.
+(NB, just as was the case with Heroku, Back4App doesn't support pure HMTL/CSS/JS apps, so the app has to be initially launched as PHP).
+To install the latest version of the app (once it has been pushed to github) "Deploy the latest commit" in the Back4App applicaiton dashboard.
+Then, on your target mobile device, navigate to the application url displayed in the Back4App application dashboard in a browser (Safari is recommended for an Apple device) and take the device specific steps to install the app on the device home screen. The app should then behave like any locally installed mobile app. 
+Simplified deployment is one of the big advantages of the PWA model. 
 
 ## Licence
 
