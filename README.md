@@ -8,7 +8,7 @@ The use case implemented is the adding of metadata to photos. Metadata is both b
 -	Integration with a cloud-based web service, specifically an email sending service, to distribute the photos.
 -	Graceful handling of situations where the email sending service is unavailable, e.g., due to lack of connectivity (*).
 -   Use of local offline storage to store configuration settings and diagnostic logging for the application itself.
--   Simple integration with Google Maps, via a "Show Location" button, to prove the metasnaps contain correct locational data. 
+-   Simple integration with Google Maps, via a "Show Location" link, to prove the metasnaps contain correct locational data. 
 > (* The email sending service is called Metasnapper-server, and the source code, built using the Node Express framework, is here: nigejohnson/Metasnapper-server (github.com). An alternative version, using the Node Hapi framework is here: nigejohnson/Hapi-metasnapper-server: A server for the "metasnapper" PWA proof of concept but written using the Hapi framework (github.com). ) 
 
 ## Prerequisites
